@@ -1,0 +1,788 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#22352f" />
+  <meta name="description" content="Atomic Habitsの考え方をもとにした、シンプルな習慣化PWAアプリ。" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <title>今日の1% | 習慣化ツール</title>
+  <style>
+    :root{
+      --bg:#f7f2ea;
+      --card:#fffdf8;
+      --ink:#211f1b;
+      --muted:#7c7468;
+      --line:#e7ddce;
+      --accent:#2f6f5e;
+      --accent-dark:#22352f;
+      --soft:#eaf3ee;
+      --warn:#b96b5d;
+      --gold:#b88a2b;
+      --shadow:0 18px 45px rgba(64,49,30,.11);
+      --radius:28px;
+    }
+    [data-theme="dark"]{
+      --bg:#121815;
+      --card:#1c2420;
+      --ink:#f6f1e8;
+      --muted:#b9afa0;
+      --line:#334139;
+      --accent:#7ed2b3;
+      --accent-dark:#0f1714;
+      --soft:#22362f;
+      --warn:#e39786;
+      --gold:#e0bd62;
+      --shadow:0 18px 45px rgba(0,0,0,.28);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink)}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",Meiryo,sans-serif;
+      display:flex;
+      justify-content:center;
+      padding:calc(18px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom));
+    }
+    button,input,textarea,select{font:inherit}
+    button{border:0;cursor:pointer}
+    .app{width:min(480px,100%)}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:2px 2px 14px}
+    .brand{font-size:30px;font-weight:900;letter-spacing:-.06em;line-height:1}
+    .date{text-align:right;color:var(--muted);font-size:12px;line-height:1.5}
+    .tabs{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:7px;
+      margin-bottom:14px;
+      position:sticky;
+      top:6px;
+      z-index:5;
+    }
+    .tab{
+      padding:10px 0;
+      border-radius:999px;
+      background:rgba(255,255,255,.64);
+      color:var(--muted);
+      border:1px solid var(--line);
+      font-size:13px;
+      font-weight:800;
+      backdrop-filter:blur(10px);
+    }
+    [data-theme="dark"] .tab{background:rgba(28,36,32,.72)}
+    .tab.active{background:var(--accent-dark);color:white;border-color:var(--accent-dark)}
+    .screen{display:none}
+    .screen.active{display:block}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      margin-bottom:14px;
+      overflow:hidden;
+    }
+    .hero{
+      background:linear-gradient(135deg,var(--accent-dark),#2c5a4f);
+      color:#fff;
+      border-color:transparent;
+    }
+    .hero p{margin:0 0 10px;color:#dce8e3;font-size:13px}
+    .hero h1{margin:0;font-size:24px;letter-spacing:-.04em;line-height:1.34}
+    .hero .edit-identity{margin-top:14px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22)}
+    .section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+    h2,h3{margin:0;letter-spacing:-.03em}
+    h2{font-size:19px}
+    h3{font-size:17px}
+    .small{font-size:12px;color:var(--muted)}
+    .pill{
+      border-radius:999px;
+      padding:9px 12px;
+      background:var(--soft);
+      color:var(--accent);
+      font-weight:900;
+      font-size:13px;
+      white-space:nowrap;
+    }
+    .habit{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:14px 0;
+      border-top:1px solid var(--line);
+    }
+    .habit:first-child{border-top:0}
+    .check{
+      width:32px;height:32px;border-radius:50%;
+      border:2px solid #b9ad9e;
+      flex:0 0 auto;
+      display:grid;place-items:center;
+      font-weight:900;
+      background:transparent;
+      color:transparent;
+    }
+    .habit.done .check{background:var(--accent);border-color:var(--accent);color:#10231d}
+    .habit-main{flex:1;min-width:0}
+    .habit-name{font-weight:900;font-size:16px;margin-bottom:4px}
+    .habit-desc{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .habit-actions{display:flex;gap:8px;align-items:center}
+    .btn{
+      background:var(--accent);
+      color:#10231d;
+      border-radius:999px;
+      padding:10px 13px;
+      font-weight:900;
+      font-size:13px;
+    }
+    .btn.dark{background:var(--accent-dark);color:white}
+    .btn.soft{background:var(--soft);color:var(--accent)}
+    .btn.ghost{background:transparent;color:var(--muted);padding:8px 4px}
+    .btn.warn{background:#f4dfd8;color:#8f3c30}
+    [data-theme="dark"] .btn.warn{background:#40251f;color:#ffb5a4}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+    .stat{
+      background:rgba(127,105,74,.07);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:12px;
+      min-height:78px;
+    }
+    .stat span{display:block;color:var(--muted);font-size:11px}
+    .stat b{display:block;font-size:23px;margin-top:5px;letter-spacing:-.05em}
+    .message{
+      margin-top:12px;
+      border-radius:20px;
+      background:rgba(127,105,74,.09);
+      color:var(--ink);
+      padding:14px;
+      line-height:1.55;
+      font-size:14px;
+    }
+    .grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+    .daydot{
+      aspect-ratio:1/1;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(127,105,74,.06);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:10px;
+      color:var(--muted);
+      position:relative;
+    }
+    .daydot.on{background:var(--soft);color:var(--accent);border-color:rgba(47,111,94,.28);font-weight:900}
+    .daydot.full{background:var(--accent);color:#10231d;border-color:var(--accent)}
+    .daydot.today{outline:2px solid var(--gold)}
+    textarea,input,select{
+      width:100%;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.62);
+      color:var(--ink);
+      border-radius:18px;
+      padding:13px 14px;
+      outline:none;
+    }
+    [data-theme="dark"] textarea,[data-theme="dark"] input,[data-theme="dark"] select{background:#141b18}
+    textarea{resize:none;min-height:72px;line-height:1.55}
+    label{font-size:12px;color:var(--muted);font-weight:800;display:block;margin:12px 0 6px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .listitem{
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:13px;
+      margin-bottom:10px;
+      background:rgba(127,105,74,.04);
+    }
+    .listitem-title{font-weight:900;margin-bottom:6px}
+    .listitem-desc{font-size:12px;color:var(--muted);line-height:1.5}
+    .listitem-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+    .timer-screen{
+      position:fixed;inset:0;background:rgba(15,23,20,.97);
+      display:none;align-items:center;justify-content:center;
+      padding:22px;z-index:20;color:white;
+    }
+    .timer-box{text-align:center;width:min(390px,100%)}
+    .timer-label{font-size:15px;color:#dce8e3;margin-bottom:10px}
+    .timer{font-size:84px;font-weight:1000;letter-spacing:-.08em;margin:8px 0 20px}
+    .timer-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+    .timer-actions .btn{background:#fff;color:#10231d}
+    .timer-actions .soft{background:rgba(255,255,255,.13);color:white}
+    .toast{
+      position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));
+      transform:translateX(-50%) translateY(80px);
+      background:#161d1a;color:#fff;border-radius:999px;padding:11px 16px;
+      font-size:13px;font-weight:900;box-shadow:var(--shadow);opacity:0;
+      transition:.25s;z-index:30;white-space:nowrap;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .modal{
+      position:fixed;inset:0;background:rgba(0,0,0,.42);
+      display:none;align-items:flex-end;justify-content:center;
+      z-index:25;padding:14px;
+    }
+    .modal-card{
+      width:min(480px,100%);
+      background:var(--card);
+      color:var(--ink);
+      border-radius:28px;
+      padding:18px;
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+    .modal-actions{display:flex;gap:10px;margin-top:14px}
+    .modal-actions button{flex:1}
+    .footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.7;padding:12px 0 28px}
+    .empty{color:var(--muted);font-size:13px;line-height:1.7;text-align:center;padding:16px 4px}
+    @media (max-width:360px){
+      .brand{font-size:26px}.timer{font-size:68px}.stats{grid-template-columns:1fr}.row{grid-template-columns:1fr}
+      .tab{font-size:12px}
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <div class="top">
+      <div class="brand">今日の1%</div>
+      <div class="date" id="date"></div>
+    </div>
+
+    <nav class="tabs" aria-label="画面切替">
+      <button class="tab active" data-screen="today">今日</button>
+      <button class="tab" data-screen="review">記録</button>
+      <button class="tab" data-screen="habits">習慣</button>
+      <button class="tab" data-screen="settings">設定</button>
+    </nav>
+
+    <section class="screen active" id="screen-today">
+      <div class="card hero">
+        <p>今日は何を証明しますか？</p>
+        <h1 id="identityText"></h1>
+        <button class="btn edit-identity" id="openIdentity">アイデンティティを変える</button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>今日の小さな行動</h2>
+          <span class="pill">始めたら成功</span>
+        </div>
+        <div id="todayHabits"></div>
+      </div>
+
+      <div class="card">
+        <div class="stats">
+          <div class="stat"><span>今日</span><b id="todayStat">0/0</b></div>
+          <div class="stat"><span>連続</span><b id="streakStat">0日</b></div>
+          <div class="stat"><span>今週</span><b id="weekStat">0%</b></div>
+        </div>
+        <div class="message" id="dailyMessage"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>夜の一行</h2>
+          <span class="small">長く書かない</span>
+        </div>
+        <textarea id="dailyNote" placeholder="今日、一番よかったことは？"></textarea>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-review">
+      <div class="card">
+        <div class="section-title">
+          <h2>直近28日</h2>
+          <span class="small">○が多いほど前進</span>
+        </div>
+        <div class="grid7" id="calendar"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <h2>習慣別の実行率</h2>
+          <span class="small">直近7日</span>
+        </div>
+        <div id="habitRates"></div>
+      </div>
+
+      <div class="card">
+        <h2>週末レビュー</h2>
+        <label for="reviewGood">今週、一番続いた理由は？</label>
+        <textarea id="reviewGood" placeholder="例：朝コーヒーの後にやると自然にできた"></textarea>
+        <label for="reviewFix">来週、もっと簡単にするなら？</label>
+        <textarea id="reviewFix" placeholder="例：英語は教材を選ばず、アプリを開くだけにする"></textarea>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-habits">
+      <div class="card">
+        <div class="section-title">
+          <h2>習慣を編集</h2>
+          <button class="btn soft" id="addHabit">追加</button>
+        </div>
+        <div id="habitEditor"></div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-settings">
+      <div class="card">
+        <h2>本番利用の設定</h2>
+
+        <label for="themeSelect">表示</label>
+        <select id="themeSelect">
+          <option value="light">ライト</option>
+          <option value="dark">ダーク</option>
+        </select>
+
+        <label for="timerMinutes">開始タイマー</label>
+        <select id="timerMinutes">
+          <option value="1">1分</option>
+          <option value="2">2分</option>
+          <option value="3">3分</option>
+          <option value="5">5分</option>
+        </select>
+
+        <div class="row">
+          <button class="btn dark" id="exportData" style="margin-top:14px;">データを書き出す</button>
+          <button class="btn soft" id="importDataBtn" style="margin-top:14px;">データを読み込む</button>
+        </div>
+        <input type="file" id="importData" accept="application/json" style="display:none" />
+
+        <button class="btn warn" id="resetAll" style="margin-top:10px;width:100%;">全データをリセット</button>
+      </div>
+
+      <div class="card">
+        <h2>ホーム画面に追加</h2>
+        <p class="small" style="line-height:1.7;">
+          iPhoneならSafariでこのファイルを開き、共有ボタン → 「ホーム画面に追加」。Android/Chromeならメニュー → 「アプリをインストール」。追加後はオフラインでも使えます。
+        </p>
+      </div>
+    </section>
+
+    <div class="footer">
+      Never miss twice. 途切れても、今日戻ればOK。
+      <br>このアプリのデータは端末内に保存されます。
+    </div>
+  </main>
+
+  <div class="timer-screen" id="timerScreen">
+    <div class="timer-box">
+      <div class="timer-label" id="timerLabel">2分だけ始める</div>
+      <div class="timer" id="timerText">2:00</div>
+      <div class="timer-actions">
+        <button class="btn" id="timerComplete">完了にする</button>
+        <button class="btn soft" id="timerCancel">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="habitModal">
+    <div class="modal-card">
+      <h2 id="modalTitle">習慣を追加</h2>
+      <input type="hidden" id="habitId" />
+      <label for="habitName">名前</label>
+      <input id="habitName" placeholder="例：英語 2分" />
+      <label for="habitDesc">最小行動</label>
+      <input id="habitDesc" placeholder="例：音声を1つ聞く / アプリを開く" />
+      <label for="habitIdentity">証明したい自分</label>
+      <input id="habitIdentity" placeholder="例：世界とつながる人" />
+      <div class="modal-actions">
+        <button class="btn soft" id="modalCancel">キャンセル</button>
+        <button class="btn dark" id="modalSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="identityModal">
+    <div class="modal-card">
+      <h2>アイデンティティ</h2>
+      <label for="identityInput">私は、どんな人になる？</label>
+      <textarea id="identityInput"></textarea>
+      <div class="modal-actions">
+        <button class="btn soft" id="identityCancel">キャンセル</button>
+        <button class="btn dark" id="identitySave">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+const STORE = "onePercentHabitApp.v1";
+
+const defaultState = {
+  version: 1,
+  settings: {
+    identity: "私は、少しずつ前に進む人です。",
+    timerMinutes: 2,
+    theme: "light"
+  },
+  habits: [
+    { id:"career", name:"転職活動 2分", desc:"求人を1件見る / 職務経歴書を1行直す", identity:"市場価値を高め続ける人", active:true, createdAt:new Date().toISOString() },
+    { id:"english", name:"英語 2分", desc:"音声を聞く / アプリを開く", identity:"世界とつながる人", active:true, createdAt:new Date().toISOString() },
+    { id:"reading", name:"読書 2分", desc:"本を1ページ読む", identity:"世界を学び続ける人", active:true, createdAt:new Date().toISOString() },
+    { id:"health", name:"運動 2分", desc:"スクワット10回 / 外に出る", identity:"健康を大切にする人", active:true, createdAt:new Date().toISOString() }
+  ],
+  days: {},
+  reviews: {}
+};
+
+let state = loadState();
+let activeHabitId = null;
+let timerInterval = null;
+let remaining = 120;
+
+function todayKey(){
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+}
+function keyFromDate(d){
+  const x = new Date(d);
+  x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
+  return x.toISOString().slice(0,10);
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE);
+    if(!raw) return structuredClone(defaultState);
+    const parsed = JSON.parse(raw);
+    return {
+      ...structuredClone(defaultState),
+      ...parsed,
+      settings:{...defaultState.settings, ...(parsed.settings||{})},
+      habits:Array.isArray(parsed.habits) ? parsed.habits : defaultState.habits,
+      days:parsed.days || {},
+      reviews:parsed.reviews || {}
+    };
+  }catch(e){
+    return structuredClone(defaultState);
+  }
+}
+function save(){ localStorage.setItem(STORE, JSON.stringify(state)); }
+function ensureToday(){
+  const k = todayKey();
+  if(!state.days[k]) state.days[k] = {done:{}, note:""};
+  if(!state.days[k].done) state.days[k].done = {};
+  if(typeof state.days[k].note !== "string") state.days[k].note = "";
+}
+function activeHabits(){ return state.habits.filter(h => h.active !== false); }
+function doneCountFor(key){
+  const day = state.days[key];
+  if(!day || !day.done) return 0;
+  return activeHabits().filter(h => day.done[h.id]).length;
+}
+function isAnyDone(key){ return doneCountFor(key) > 0; }
+function calcStreak(){
+  let count = 0;
+  const d = new Date();
+  for(let i=0;i<730;i++){
+    const k = keyFromDate(d);
+    if(isAnyDone(k)) count++;
+    else if(i !== 0) break;
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+function weekCompletionRate(){
+  const totalHabits = Math.max(activeHabits().length, 1);
+  let done = 0, total = 0;
+  const d = new Date();
+  for(let i=0;i<7;i++){
+    const k = keyFromDate(d);
+    done += doneCountFor(k);
+    total += totalHabits;
+    d.setDate(d.getDate()-1);
+  }
+  return Math.round((done / Math.max(total,1)) * 100);
+}
+function showToast(text){
+  const t = document.getElementById("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1800);
+}
+function setScreen(name){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.screen === name));
+  document.getElementById("screen-"+name).classList.add("active");
+  render();
+}
+function renderDate(){
+  const d = new Date();
+  document.getElementById("date").innerText = d.toLocaleDateString("ja-JP",{month:"long",day:"numeric",weekday:"short"}) + "\n今日だけでいい";
+}
+function renderToday(){
+  ensureToday();
+  document.getElementById("identityText").textContent = state.settings.identity;
+  const wrap = document.getElementById("todayHabits");
+  const habits = activeHabits();
+  if(!habits.length){
+    wrap.innerHTML = '<div class="empty">習慣がありません。「習慣」タブから追加してください。</div>';
+    return;
+  }
+  wrap.innerHTML = "";
+  const k = todayKey();
+  habits.forEach(h=>{
+    const done = !!state.days[k].done[h.id];
+    const row = document.createElement("div");
+    row.className = "habit" + (done ? " done" : "");
+    row.innerHTML = `
+      <button class="check" aria-label="${h.name}を${done ? "未完了" : "完了"}にする">${done ? "✓" : ""}</button>
+      <div class="habit-main">
+        <div class="habit-name">${escapeHtml(h.name)}</div>
+        <div class="habit-desc">${escapeHtml(h.desc)}</div>
+      </div>
+      <div class="habit-actions">
+        <button class="btn ${done ? "soft" : ""}">${done ? "済" : "開始"}</button>
+      </div>
+    `;
+    row.querySelector(".check").onclick = () => toggleDone(h.id);
+    row.querySelector(".habit-actions button").onclick = () => done ? toggleDone(h.id) : openTimer(h.id, h.name);
+    wrap.appendChild(row);
+  });
+  const doneCount = doneCountFor(k);
+  document.getElementById("todayStat").textContent = `${doneCount}/${habits.length}`;
+  document.getElementById("streakStat").textContent = `${calcStreak()}日`;
+  document.getElementById("weekStat").textContent = `${weekCompletionRate()}%`;
+  const msg = document.getElementById("dailyMessage");
+  if(doneCount === 0) msg.textContent = "まずは1つだけ。2分で十分です。";
+  else if(doneCount === 1) msg.textContent = "今日はもう成功です。続けたければどうぞ。";
+  else if(doneCount < habits.length) msg.textContent = "昨日より1%前進。地味だけど、これが強いです。";
+  else msg.textContent = "全部完了。これは気合いではなく、仕組みの勝利です。";
+  const note = document.getElementById("dailyNote");
+  note.value = state.days[k].note || "";
+  note.oninput = () => { state.days[k].note = note.value; save(); };
+}
+function toggleDone(id){
+  ensureToday();
+  const k = todayKey();
+  state.days[k].done[id] = !state.days[k].done[id];
+  save();
+  render();
+  showToast(state.days[k].done[id] ? "完了。今日は成功です。" : "未完了に戻しました");
+}
+function renderReview(){
+  const cal = document.getElementById("calendar");
+  cal.innerHTML = "";
+  const habitsLen = Math.max(activeHabits().length,1);
+  const days = [];
+  const d = new Date();
+  d.setDate(d.getDate()-27);
+  for(let i=0;i<28;i++){
+    const current = new Date(d);
+    const k = keyFromDate(current);
+    days.push({date:current,key:k,count:doneCountFor(k)});
+    d.setDate(d.getDate()+1);
+  }
+  days.forEach(day=>{
+    const el = document.createElement("div");
+    el.className = "daydot";
+    if(day.count > 0) el.classList.add("on");
+    if(day.count >= habitsLen) el.classList.add("full");
+    if(day.key === todayKey()) el.classList.add("today");
+    el.title = `${day.key}: ${day.count}/${habitsLen}`;
+    el.textContent = day.date.getDate();
+    cal.appendChild(el);
+  });
+
+  const rates = document.getElementById("habitRates");
+  rates.innerHTML = "";
+  activeHabits().forEach(h=>{
+    let c = 0;
+    const x = new Date();
+    for(let i=0;i<7;i++){
+      const k = keyFromDate(x);
+      if(state.days[k]?.done?.[h.id]) c++;
+      x.setDate(x.getDate()-1);
+    }
+    const pct = Math.round(c/7*100);
+    const item = document.createElement("div");
+    item.className = "listitem";
+    item.innerHTML = `
+      <div class="listitem-title">${escapeHtml(h.name)}：${pct}%</div>
+      <div class="listitem-desc">直近7日で ${c}/7日。${pct < 40 ? "もっと小さくすると続きやすいかもしれません。" : pct < 80 ? "いいペース。Never miss twiceでいきましょう。" : "かなり安定しています。"}</div>
+    `;
+    rates.appendChild(item);
+  });
+
+  const week = getWeekKey();
+  if(!state.reviews[week]) state.reviews[week] = {good:"", fix:""};
+  document.getElementById("reviewGood").value = state.reviews[week].good || "";
+  document.getElementById("reviewFix").value = state.reviews[week].fix || "";
+  document.getElementById("reviewGood").oninput = e => { state.reviews[week].good = e.target.value; save(); };
+  document.getElementById("reviewFix").oninput = e => { state.reviews[week].fix = e.target.value; save(); };
+}
+function getWeekKey(){
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(),0,1);
+  const week = Math.ceil((((d - onejan) / 86400000) + onejan.getDay()+1)/7);
+  return `${d.getFullYear()}-W${String(week).padStart(2,"0")}`;
+}
+function renderHabitEditor(){
+  const wrap = document.getElementById("habitEditor");
+  const habits = state.habits.filter(h=>h.active !== false);
+  if(!habits.length){ wrap.innerHTML = '<div class="empty">まだ習慣がありません。</div>'; return; }
+  wrap.innerHTML = "";
+  habits.forEach(h=>{
+    const item = document.createElement("div");
+    item.className = "listitem";
+    item.innerHTML = `
+      <div class="listitem-title">${escapeHtml(h.name)}</div>
+      <div class="listitem-desc">${escapeHtml(h.desc)}<br>証明する自分：${escapeHtml(h.identity || "")}</div>
+      <div class="listitem-actions">
+        <button class="btn soft" data-edit>編集</button>
+        <button class="btn warn" data-delete>削除</button>
+      </div>
+    `;
+    item.querySelector("[data-edit]").onclick = () => openHabitModal(h.id);
+    item.querySelector("[data-delete]").onclick = () => {
+      if(confirm("この習慣を削除しますか？過去の記録は残ります。")){
+        h.active = false; save(); render(); showToast("削除しました");
+      }
+    };
+    wrap.appendChild(item);
+  });
+}
+function renderSettings(){
+  document.getElementById("themeSelect").value = state.settings.theme;
+  document.getElementById("timerMinutes").value = String(state.settings.timerMinutes);
+  document.documentElement.dataset.theme = state.settings.theme;
+}
+function render(){
+  ensureToday();
+  renderDate();
+  renderSettings();
+  renderToday();
+  renderReview();
+  renderHabitEditor();
+}
+function openTimer(id, name){
+  activeHabitId = id;
+  remaining = Number(state.settings.timerMinutes || 2) * 60;
+  document.getElementById("timerLabel").textContent = `${name}：${state.settings.timerMinutes}分だけ始める`;
+  document.getElementById("timerScreen").style.display = "flex";
+  updateTimerText();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(()=>{
+    remaining--;
+    updateTimerText();
+    if(remaining <= 0) completeTimer();
+  },1000);
+}
+function updateTimerText(){
+  const m = Math.floor(remaining/60);
+  const s = String(remaining%60).padStart(2,"0");
+  document.getElementById("timerText").textContent = `${m}:${s}`;
+}
+function closeTimer(){
+  clearInterval(timerInterval);
+  document.getElementById("timerScreen").style.display = "none";
+}
+function completeTimer(){
+  clearInterval(timerInterval);
+  if(activeHabitId){
+    ensureToday();
+    state.days[todayKey()].done[activeHabitId] = true;
+    save();
+    showToast("完了。今日は成功です。");
+  }
+  closeTimer();
+  render();
+}
+function openHabitModal(id=null){
+  const h = id ? state.habits.find(x=>x.id===id) : null;
+  document.getElementById("modalTitle").textContent = h ? "習慣を編集" : "習慣を追加";
+  document.getElementById("habitId").value = h?.id || "";
+  document.getElementById("habitName").value = h?.name || "";
+  document.getElementById("habitDesc").value = h?.desc || "";
+  document.getElementById("habitIdentity").value = h?.identity || "";
+  document.getElementById("habitModal").style.display = "flex";
+}
+function closeHabitModal(){ document.getElementById("habitModal").style.display = "none"; }
+function saveHabitModal(){
+  const id = document.getElementById("habitId").value || crypto.randomUUID();
+  const name = document.getElementById("habitName").value.trim();
+  const desc = document.getElementById("habitDesc").value.trim();
+  const identity = document.getElementById("habitIdentity").value.trim();
+  if(!name){ alert("名前を入力してください"); return; }
+  const existing = state.habits.find(h=>h.id===id);
+  if(existing){
+    existing.name = name; existing.desc = desc; existing.identity = identity;
+  }else{
+    state.habits.push({id,name,desc,identity,active:true,createdAt:new Date().toISOString()});
+  }
+  save(); closeHabitModal(); render(); showToast("保存しました");
+}
+function openIdentityModal(){
+  document.getElementById("identityInput").value = state.settings.identity;
+  document.getElementById("identityModal").style.display = "flex";
+}
+function closeIdentityModal(){ document.getElementById("identityModal").style.display = "none"; }
+function saveIdentity(){
+  const v = document.getElementById("identityInput").value.trim();
+  if(v) state.settings.identity = v;
+  save(); closeIdentityModal(); render(); showToast("保存しました");
+}
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `one-percent-habit-backup-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importData(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const imported = JSON.parse(reader.result);
+      if(!imported.habits || !imported.days) throw new Error("invalid");
+      state = imported;
+      save(); render(); showToast("読み込みました");
+    }catch(e){
+      alert("読み込めないファイルです");
+    }
+  };
+  reader.readAsText(file);
+}
+function resetAll(){
+  if(confirm("全データをリセットしますか？この操作は取り消せません。")){
+    localStorage.removeItem(STORE);
+    state = structuredClone(defaultState);
+    save();
+    render();
+    showToast("リセットしました");
+  }
+}
+function escapeHtml(str){
+  return String(str||"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
+}
+
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setScreen(t.dataset.screen));
+document.getElementById("timerComplete").onclick = completeTimer;
+document.getElementById("timerCancel").onclick = closeTimer;
+document.getElementById("addHabit").onclick = () => openHabitModal();
+document.getElementById("modalCancel").onclick = closeHabitModal;
+document.getElementById("modalSave").onclick = saveHabitModal;
+document.getElementById("openIdentity").onclick = openIdentityModal;
+document.getElementById("identityCancel").onclick = closeIdentityModal;
+document.getElementById("identitySave").onclick = saveIdentity;
+document.getElementById("themeSelect").onchange = e => { state.settings.theme = e.target.value; save(); render(); };
+document.getElementById("timerMinutes").onchange = e => { state.settings.timerMinutes = Number(e.target.value); save(); render(); };
+document.getElementById("exportData").onclick = exportData;
+document.getElementById("importDataBtn").onclick = () => document.getElementById("importData").click();
+document.getElementById("importData").onchange = e => e.target.files?.[0] && importData(e.target.files[0]);
+document.getElementById("resetAll").onclick = resetAll;
+
+document.querySelectorAll(".modal").forEach(m=>{
+  m.addEventListener("click", e=>{ if(e.target === m) m.style.display = "none"; });
+});
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+}
+
+render();
+</script>
+</body>
+</html>
