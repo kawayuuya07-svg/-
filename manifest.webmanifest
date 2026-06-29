@@ -1,17 +1,1 @@
-{
-  "name": "今日の1% - 習慣化ツール",
-  "short_name": "今日の1%",
-  "description": "小さな習慣を毎日始めるためのシンプルなPWA。",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "background_color": "#f7f2ea",
-  "theme_color": "#22352f",
-  "icons": [
-    {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
-  ]
-}
+{"name":"今日の1% - 習慣化ツール","short_name":"今日の1%","description":"日々の積み重ねが残るシンプルな習慣化PWA。","start_url":"./index.html","scope":"./","display":"standalone","background_color":"#f7f2ea","theme_color":"#22352f","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
